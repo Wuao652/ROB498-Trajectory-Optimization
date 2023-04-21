@@ -150,7 +150,77 @@ class MyCartpoleEnv(BaseEnv):
         B = diff.reshape((4, 1))
         # ---
         return A, B
+    
+def dynamics_analytic_batch(state, action):
+    next_state = None
+    dt = 0.05
+    g = 9.81
+    m0 = 1.0
+    m1 = 0.1
+    m2 = 0.1
+    L1 = 1.0
+    L2 = 1.0
+    
+    action = -action
+    
+    B = state.shape[0]
+    state_dim = state.shape[1]
+    action_dim = action.shape[1]
+    x_dot_dot = torch.zeros((B, 1))
+    theta_1_dot_dot = torch.zeros((B, 1))
+    theta_2_dot_dot = torch.zeros((B, 1))
 
+    x, theta_1, theta_2, x_dot, theta_1_dot, theta_2_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3], state[:, 4], state[:, 5]
+    u = action
+
+    # construct D
+    D = torch.zeros((B, 3, 3))
+    D[:, 0, 0] = m0 + m1 + m2
+    D[:, 0, 1] = (0.5 * m1 + m2) * L1 * torch.cos(theta_1)
+    D[:, 0, 2] = 0.5 * m2 * L2 * torch.cos(theta_2)
+    D[:, 1, 0] = D[:, 0, 1]
+    D[:, 1, 1] = (1.0 / 3.0 * m1 + m2) * L1 * L1
+    D[:, 1, 2] = 0.5 * m2 * L1 * L2 * torch.cos(theta_1 - theta_2)
+    D[:, 2, 0] = D[:, 0, 2]
+    D[:, 2, 1] = D[:, 1, 2]
+    D[:, 2, 2] = 1.0 / 3.0 * m2 * L2 * L2
+
+    # construct C
+    C = torch.zeros((B, 3, 3))
+    C[:, 0, 1] = -(0.5 * m1 + m2) * L1 * torch.sin(theta_1) * theta_1_dot
+    C[:, 0, 2] = -0.5 * m2 * L2 * torch.sin(theta_2) * theta_2_dot
+    C[:, 1, 2] = 0.5 * m2 * L1 * L2 * torch.sin(theta_1 - theta_2) * theta_2_dot
+    C[:, 2, 1] = -0.5 * m2 * L1 * L2 * torch.sin(theta_1 - theta_2) * theta_1_dot
+
+    # construct G
+    G = torch.zeros((B, 3, 1))
+    G[:, 1, 0] = -0.5 * (m1 + m2) * g * L1 * torch.sin(theta_1)
+    G[:, 2, 0] = -0.5 * m2 * g * L2 * torch.sin(theta_2)
+
+    # construct H
+    H = torch.zeros((B, 3, 1))
+    H[:, 0, 0] = 1
+
+    # compute x_dot_dot, theta_1_dot_dot, theta_2_dot_dot
+    state_dot = torch.cat((x_dot, theta_1_dot, theta_2_dot)).view(B, 3, 1)
+    
+    # temp shape 100x3x1
+    temp = torch.bmm(-torch.inverse(D), (torch.bmm(C, state_dot) + G + torch.bmm(H, u.view(B, 1, 1))))
+    
+    x_dot_dot = temp[:, 0, 0].squeeze()
+    theta_1_dot_dot = temp[:, 1, 0].squeeze()
+    theta_2_dot_dot = temp[:, 2, 0].squeeze()
+    
+    x, theta_1, theta_2, x_dot, theta_1_dot, theta_2_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3], state[:, 4], state[:, 5]
+    x_dot_new = x_dot + dt * x_dot_dot
+    theta_1_dot_new = theta_1_dot + dt * theta_1_dot_dot
+    theta_2_dot_new = theta_2_dot + dt * theta_2_dot_dot
+    x_new = x + dt * x_dot_new
+    theta_1_new = theta_1 + dt * theta_1_dot_new
+    theta_2_new = theta_2 + dt * theta_2_dot_new
+    next_state = torch.stack((x_new, theta_1_new, theta_2_new, x_dot_new, theta_1_dot_new, theta_2_dot_new), dim=1)
+    # ---
+    return next_state
 
 def dynamics_analytic(state, action):
     """
@@ -216,7 +286,6 @@ def dynamics_analytic(state, action):
         
         # compute x_dot_dot, theta_1_dot_dot, theta_2_dot_dot
         temp = -torch.inverse(D) @ (C @ torch.tensor([[x_dot], [theta_1_dot], [theta_2_dot]]) + G + H * u)
-        # print("temp: ", temp)
         x_dot_dot[b] = temp[0, 0]
         theta_1_dot_dot[b] = temp[1, 0]
         theta_2_dot_dot[b] = temp[2, 0]

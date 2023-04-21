@@ -1,5 +1,4 @@
 import gym  # open ai gym
-import pybulletgym  # register PyBullet enviroments with open ai gym
 from numpngw import write_apng
 import cv2
 import numpy as np
@@ -10,6 +9,7 @@ import tqdm
 from mppi import MPPI
 from cartpole_env1 import MyCartpoleEnv
 from cartpole_env1 import dynamics_analytic
+from cartpole_env1 import dynamics_analytic_batch
 
 def swing_up_cost_function(state, action):
     """
@@ -23,8 +23,8 @@ def swing_up_cost_function(state, action):
     # --- Your code here
     target_pose = target_pose.reshape((1,6))
     Q = torch.tensor([[1., 0., 0., 0., 0., 0.],
-                      [0., 1., 0., 0., 0., 0.],
-                      [0., 0., 1., 0., 0., 0.],
+                      [0., 10., 0., 0., 0., 0.],
+                      [0., 0., 10., 0., 0., 0.],
                       [0., 0., 0., 0.1, 0., 0.],
                       [0., 0., 0., 0., 0.1, 0.],
                       [0., 0., 0., 0., 0., 0.1]]
@@ -74,7 +74,8 @@ class MPPI_Controller(object):
         """
         next_state = None
         # --- Your code here
-        next_state = dynamics_analytic(state, action)
+        # next_state = dynamics_analytic(state, action)
+        next_state = dynamics_analytic_batch(state, action)
         # ---
         return next_state
 
@@ -90,8 +91,7 @@ class MPPI_Controller(object):
         action = None
         state_tensor = None
         # --- Your code here
-        print(state)
-        print(state.dtype)
+        print('Current state: ', state)
         state_tensor = torch.tensor(state)
         action_tensor = self.mppi.command(state_tensor)
         action = action_tensor.detach().cpu().numpy()
@@ -108,18 +108,25 @@ state = state_0
 frames = []
 frames.append(env.render())
 
-controller = MPPI_Controller(env=env, model=None, cost_function=swing_up_cost_function,num_samples=10, horizon=10)
+controller = MPPI_Controller(env=env,
+                             model=None,
+                             cost_function=swing_up_cost_function,
+                             num_samples=100,
+                             horizon=20)
 TARGET_POSE_FREE_TENSOR = torch.tensor([0., 0., 0., 0., 0., 0.])
 
-for i in range(20):
+for i in range(50):
     action = controller.control(state)
     state = env.step(action)
-    print(action)
+    print('Action: ', action)
     frame = env.render()
     frames.append(frame)
+    plt.imshow(frame)
+    plt.pause(0.01)
+    plt.clf()
 
-for i in range(len(frames)):
-    cv2.imshow('frame', frames[i][..., ::-1])
-    cv2.waitKey(0)
+# for i in range(len(frames)):
+#     cv2.imshow('frame', frames[i][..., ::-1])
+#     cv2.waitKey(0)
 
 
