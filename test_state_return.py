@@ -7,7 +7,7 @@ import cv2
 
 np.set_printoptions(precision=3, suppress=True)
 myenv = MyCartpoleEnv()
-myenv.reset(state = np.array([0.0, np.pi, 0.0, 0.0, 0.0, 0.0]))
+myenv.reset(state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
 
 frames=[] #frames to create animated png
 img = myenv.render()

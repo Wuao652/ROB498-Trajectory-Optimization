@@ -57,7 +57,6 @@ for t in range(T):
 # convert back to numpy for plotting
 states_analytic = states_analytic.reshape(T+1, 6).numpy()
 
-states_analytic = -states_analytic
 
 # Plot and compare - They should be indistinguishable 
 fig, axes = plt.subplots(3, 2, figsize=(8, 8))

@@ -173,6 +173,7 @@ def dynamics_analytic(state, action):
     L1 = 1.0
     L2 = 1.0
 
+    action = -action
     # --- Your code here
     # for-loop version
     B = state.shape[0]

@@ -102,7 +102,7 @@ class MPPI_Controller(object):
     
 env = MyCartpoleEnv()
 np.random.seed(42)
-env.reset(state=np.array([0., 0., 0., 0., 0., 0.]))
+env.reset(state=np.array([0., 0.02, 0.02, 0., 0., 0.]))
 state_0 = env.get_state()
 state = state_0
 frames = []
