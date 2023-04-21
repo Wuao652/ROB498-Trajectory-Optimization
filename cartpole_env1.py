@@ -77,6 +77,8 @@ class MyCartpoleEnv(BaseEnv):
 
     def set_state(self, state):
         x, theta, theta_1, x_dot, theta_dot ,theta_dot_1 = state
+        theta_1 -= theta
+        theta_dot_1 -= theta_dot
         p.resetJointState(self.cartpole, 0, targetValue=x, targetVelocity=x_dot)
         p.resetJointState(self.cartpole, 1, targetValue=theta, targetVelocity=theta_dot)
         p.resetJointState(self.cartpole, 2, targetValue=theta_1, targetVelocity=theta_dot_1)
