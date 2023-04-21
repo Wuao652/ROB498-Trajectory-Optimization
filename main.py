@@ -22,14 +22,15 @@ def swing_up_cost_function(state, action):
     cost = None
     # --- Your code here
     target_pose = target_pose.reshape((1,6))
-    Q = torch.tensor([[1., 0., 0., 0., 0., 0.],
-                      [0., 10., 0., 0., 0., 0.],
-                      [0., 0., 10., 0., 0., 0.],
-                      [0., 0., 0., 0.1, 0., 0.],
-                      [0., 0., 0., 0., 0.1, 0.],
-                      [0., 0., 0., 0., 0., 0.1]]
-    )
-    delta = state - target_pose #[B, 3]
+    # Q = torch.tensor([[1, 0., 0., 0., 0., 0.],
+    #                   [0., 1., 0., 0., 0., 0.],
+    #                   [0., 0., 1., 0., 0., 0.],
+    #                   [0., 0., 0., 0.1, 0., 0.],
+    #                   [0., 0., 0., 0., 0.1, 0.],
+    #                   [0., 0., 0., 0., 0., 0.1]]
+    # )
+    Q = torch.diag(torch.tensor([1, 5, 5, 0.1, 0.1, 0.1]))
+    delta = state - target_pose #[B, 6]
     cost = delta @ Q @ delta.T
     cost = torch.diag(cost, 0)
 
@@ -51,7 +52,7 @@ class MPPI_Controller(object):
         action_dim = 1
         u_min = torch.from_numpy(env.action_space.low)
         u_max = torch.from_numpy(env.action_space.high)
-        noise_sigma = 0.5 * torch.eye(env.action_space.shape[0])
+        noise_sigma = 10 * torch.eye(env.action_space.shape[0])
         lambda_value = 0.01
         # ---
         from mppi import MPPI
@@ -91,7 +92,6 @@ class MPPI_Controller(object):
         action = None
         state_tensor = None
         # --- Your code here
-        print('Current state: ', state)
         state_tensor = torch.tensor(state)
         action_tensor = self.mppi.command(state_tensor)
         action = action_tensor.detach().cpu().numpy()
@@ -102,25 +102,31 @@ class MPPI_Controller(object):
     
 env = MyCartpoleEnv()
 np.random.seed(42)
-env.reset(state=np.array([0., 0.02, 0.02, 0., 0., 0.]))
+env.reset(state=np.array([0., 0.1, 0.1, 0., 0., 0.]))
 state_0 = env.get_state()
 state = state_0
 frames = []
 frames.append(env.render())
 
+NUM_SAMPLES = 200
+HORIZON = 15
 controller = MPPI_Controller(env=env,
                              model=None,
                              cost_function=swing_up_cost_function,
-                             num_samples=100,
-                             horizon=20)
-TARGET_POSE_FREE_TENSOR = torch.tensor([0., 0., 0., 0., 0., 0.])
+                             num_samples=NUM_SAMPLES,
+                             horizon=HORIZON)
+TARGET_POSE_FREE_TENSOR = torch.tensor([0., 0., 0., 0., 0., 0.], dtype=torch.float32)
 
 for i in range(50):
     action = controller.control(state)
     state = env.step(action)
-    print('Action: ', action)
+    error = swing_up_cost_function(torch.from_numpy(state).float()-TARGET_POSE_FREE_TENSOR, action)
+    # print('State : ', state)
+    print(f'Action: {action}, Error: {error}')
     frame = env.render()
     frames.append(frame)
+    plt.title(f'MPPI control, state0: {state_0},\n samples: {NUM_SAMPLES}, horizon: {HORIZON}')
+    # plt.axis('off')
     plt.imshow(frame)
     plt.pause(0.01)
     plt.clf()
