@@ -165,7 +165,7 @@ def dynamics_analytic(state, action):
     next_state = None
     dt = 0.05
     g = 9.81
-    m0 = 1
+    m0 = 1.0
     m1 = 0.1
     m2 = 0.1
     L1 = 1.0
@@ -207,19 +207,19 @@ def dynamics_analytic(state, action):
         H = torch.zeros((3, 1))
         H[0, 0] = 1
 
-        print("x: ", x)
-        print("theta_1: ", theta_1)
-        print("theta_2: ", theta_2)
+        # print("x: ", x)
+        # print("theta_1: ", theta_1)
+        # print("theta_2: ", theta_2)
         
         # compute x_dot_dot, theta_1_dot_dot, theta_2_dot_dot
         temp = -torch.inverse(D) @ (C @ torch.tensor([[x_dot], [theta_1_dot], [theta_2_dot]]) + G + H * u)
-        print("temp: ", temp)
+        # print("temp: ", temp)
         x_dot_dot[b] = temp[0, 0]
         theta_1_dot_dot[b] = temp[1, 0]
         theta_2_dot_dot[b] = temp[2, 0]
-    print("x_dot_dot: ", x_dot_dot)
-    print("theta_1_dot_dot: ", theta_1_dot_dot)
-    print("theta_2_dot_dot: ", theta_2_dot_dot)
+    # print("x_dot_dot: ", x_dot_dot)
+    # print("theta_1_dot_dot: ", theta_1_dot_dot)
+    # print("theta_2_dot_dot: ", theta_2_dot_dot)
 
     x, theta_1, theta_2, x_dot, theta_1_dot, theta_2_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3], state[:, 4], state[:, 5]
     x_dot_new = x_dot + dt * x_dot_dot
