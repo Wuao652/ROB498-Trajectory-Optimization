@@ -35,6 +35,7 @@ class InverteddoublependulumEnv():
         timestep=0.0165
         state, reward, done = self.step(action)
         return state, reward, done
+    
     def inverted_double_pendulum_dynamics(self, state_batch, u_batch):
         """
         Compute the dynamics of the inverted double pendulum for a batch of states.
