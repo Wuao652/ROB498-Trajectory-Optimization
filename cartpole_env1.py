@@ -161,7 +161,6 @@ def dynamics_analytic_batch(state, action):
     L1 = 1.0
     L2 = 1.0
     
-    action = -action
     
     B = state.shape[0]
     state_dim = state.shape[1]
@@ -205,7 +204,7 @@ def dynamics_analytic_batch(state, action):
     state_dot = torch.cat((x_dot, theta_1_dot, theta_2_dot)).view(B, 3, 1)
     
     # temp shape 100x3x1
-    temp = torch.bmm(-torch.inverse(D), (torch.bmm(C, state_dot) + G + torch.bmm(H, u.view(B, 1, 1))))
+    temp = torch.bmm(-torch.inverse(D), (torch.bmm(C, state_dot) + G - torch.bmm(H, u.view(B, 1, 1))))
     
     x_dot_dot = temp[:, 0, 0].squeeze()
     theta_1_dot_dot = temp[:, 1, 0].squeeze()
@@ -338,3 +337,90 @@ def linearize_pytorch(state, control):
 
 def minus_pi_to_pi(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
+
+def dynamics_analytic_np(state, action):
+    """
+        Computes next state of cartpole given current state and action using analytic dynamics
+
+    Args:
+        state: numpy array of shape (6,) representing cartpole state
+        action: numpy array of shape (1,) representing the force to apply
+
+    Returns:
+        next_state: numpy array of shape (6,) representing next cartpole state
+    """
+    dt = 0.05
+    g = 9.81
+    m0 = 1.0
+    m1 = 0.1
+    m2 = 0.1
+    L1 = 1.0
+    L2 = 1.0
+    print("state :", state.shape)
+    print("action :", action.shape)
+    next_state = None
+    x, theta_1, theta_2, x_dot, theta_1_dot, theta_2_dot = state
+    u = action[0]
+    # construct D
+    # D = np.zeros((3, 3))
+    # D[0, 0] = m0 + m1 + m2
+    # D[0, 1] = (0.5 * m1 + m2) * L1 * np.cos(theta_1)
+    # D[0, 2] = 0.5 * m2 * L2 * np.cos(theta_2)
+    # D[1, 0] = D[0, 1]
+    # D[1, 1] = (m1 / 3.0 + m2) * L1 ** 2
+    # D[1, 2] = 0.5 * m2 * L1 * L2 * np.cos(theta_1 - theta_2)
+    # D[2, 0] = D[0, 2]
+    # D[2, 1] = D[1, 2]
+    # D[2, 2] = (m2 / 3.0) * L2 ** 2
+    D = [m0 + m1 + m2, (0.5 * m1 + m2) * L1 * np.cos(theta_1), 0.5 * m2 * L2 * np.cos(theta_2),
+         (0.5 * m1 + m2) * L1 * np.cos(theta_1), (m1 / 3.0 + m2) * L1 ** 2, 0.5 * m2 * L1 * L2 * np.cos(theta_1 - theta_2),
+         0.5 * m2 * L2 * np.cos(theta_2), 0.5 * m2 * L1 * L2 * np.cos(theta_1 - theta_2), (m2 / 3.0) * L2 ** 2]
+    D = np.stack(D, axis=0).reshape(3, 3)
+
+    # construct C
+    # C = np.zeros((3, 3))
+    # C[0, 1] = -(0.5 * m1 + m2) * L1 * np.sin(theta_1) * theta_1_dot
+    # C[0, 2] = -0.5 * m2 * L2 * np.sin(theta_2) * theta_2_dot
+    # C[1, 2] = 0.5 * m2 * L1 * L2 * np.sin(theta_1 - theta_2) * theta_2_dot
+    # C[2, 1] = -0.5 * m2 * L1 * L2 * np.sin(theta_1 - theta_2) * theta_1_dot
+    C = [0, -(0.5 * m1 + m2) * L1 * np.sin(theta_1) * theta_1_dot, -0.5 * m2 * L2 * np.sin(theta_2) * theta_2_dot,
+         0, 0, 0.5 * m2 * L1 * L2 * np.sin(theta_1 - theta_2) * theta_2_dot,
+         0, -0.5 * m2 * L1 * L2 * np.sin(theta_1 - theta_2) * theta_1_dot, 0]
+    C = np.stack(C, axis=0).reshape(3, 3)
+
+    # construct G
+    # G = np.zeros((3, 1))
+    # G[1, 0] = -0.5 * (m1 + m2) * g * L1 * np.sin(theta_1)
+    # G[2, 0] = -0.5 * m2 * g * L2 * np.sin(theta_2)
+    G = [0, -0.5 * (m1 + m2) * g * L1 * np.sin(theta_1), -0.5 * m2 * g * L2 * np.sin(theta_2)]
+    G = np.stack(G, axis=0).reshape(3, 1)
+    # construct H
+    H = np.zeros((3, 1))
+    H[0, 0] = 1.0
+    
+    temp = -np.linalg.inv(D) @ (C @ np.stack([x_dot, theta_1_dot, theta_2_dot], axis=0).reshape(3, 1) + G - H * u)
+    # print("temp: ", temp)
+    x_dot_dot, theta_1_dot_dot, theta_2_dot_dot = temp.reshape(-1) 
+    # print("x: ", x)
+    # print("theta_1: ", theta_1)
+    # print("theta_2: ", theta_2)
+    # print("x_dot_dot: ", x_dot_dot)
+    # print("theta_1_dot_dot: ", theta_1_dot_dot)
+    # print("theta_2_dot_dot: ", theta_2_dot_dot)
+    # compute next state
+    x_dot_new = x_dot + dt * x_dot_dot
+    theta_1_dot_new = theta_1_dot + dt * theta_1_dot_dot
+    theta_2_dot_new = theta_2_dot + dt * theta_2_dot_dot
+    x_new = x + dt * x_dot_new
+    theta_1_new = theta_1 + dt * theta_1_dot_new
+    theta_2_new = theta_2 + dt * theta_2_dot_new
+    next_state = np.stack([x_new, theta_1_new, theta_2_new, x_dot_new, theta_1_dot_new, theta_2_dot_new], axis=0).astype(np.float32)
+    # next_state = np.array([x_new, theta_1_new, theta_2_new, x_dot_new, theta_1_dot_new, theta_2_dot_new]).astype(np.float32)
+    return next_state
+a = np.array([1])
+print(a.shape)
+print(a)
+fake_state = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+fake_action = np.array([0.5])
+out = dynamics_analytic_np(fake_state, fake_action)
+print(out)
