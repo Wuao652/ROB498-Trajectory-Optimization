@@ -29,7 +29,7 @@ import numpy as np
 np.random.seed(2)
 
 # first let's generate a random control sequence
-T = 10
+T = 20
 control_sequence = np.random.randn(T, 1).astype(np.float32)
 start_state = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
 env = MyCartpoleEnv()
@@ -60,8 +60,10 @@ states_analytic = states_analytic.reshape(T+1, 6).numpy()
 
 # Plot and compare - They should be indistinguishable 
 fig, axes = plt.subplots(3, 2, figsize=(8, 8))
-axes[0][0].plot(states_analytic[:, 0], label='analytic')
-axes[0][0].plot(states_pybullet[:, 0], '--', label='pybullet')
+fig.suptitle("Analytic Dynamics vs PyBullet Dynamics Simulation")
+plt.tight_layout()
+axes[0][0].plot(states_analytic[:, 0], label='Analytic Dynamics Model')
+axes[0][0].plot(states_pybullet[:, 0], '--', label='PyBullet Dynamics Simulation')
 axes[0][0].title.set_text('x')
 
 axes[1][0].plot(states_analytic[:, 1])
