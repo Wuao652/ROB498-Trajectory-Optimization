@@ -15,3 +15,25 @@ conda activate venv
 ```bash
 python main.py
 ```
+
+## Results
+### Random Trajectory
+The following figure show the result of the inverted double pendulum system under random actions.
+
+<p align="center">
+  <img src="./fig/cartpole_example.gif" alt="Alt Text">
+</p>
+
+### MPPI
+The following figure show the result of the inverted double pendulum system under MPPI. Our MPPI controller can stabilize the system when the pole angle is not too large.
+
+<p align="center">
+  <img src="./fig/MPPI_cartpole.gif" alt="Alt Text">
+</p>
+
+### DDP
+The following figure show the result of the inverted double pendulum system under DDP. Stay tuned for a better result!
+
+<p align="center">
+    <img src="./fig/DDP_cartpole.gif" alt="Alt Text">
+</p>
