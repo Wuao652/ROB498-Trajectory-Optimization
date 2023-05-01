@@ -1,29 +1,31 @@
-import matplotlib.pyplot as plt
-from numpngw import write_apng
-from cartpole_env1 import *
-
 import numpy as np
-import cv2
+import matplotlib.pyplot as plt
+from cartpole_env1 import *
 
 np.set_printoptions(precision=3, suppress=True)
 myenv = MyCartpoleEnv()
 myenv.reset(state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
 
-frames=[] #frames to create animated png
-img = myenv.render()
+# frames to create animated png
+frames=[] 
+img = myenv.render().astype(np.uint8)
 frames.append(img)
 
-# use cv2 to display the image
-cv2.imshow('image', img)
-cv2.waitKey(0)
+# use plt to visualize the img 
+plt.figure()
+plt.imshow(img)
+plt.pause(0.01)
+plt.clf()
+
 for i in range(100):
     action = np.array([1.0])
     s = myenv.step(action)
-    img = myenv.render()
+    img = myenv.render().astype(np.uint8)
     frames.append(img)
-    cv2.imshow('image', img[...,::-1])
     print(f"===================={i}====================")
     print("state: ", s)
-    cv2.waitKey(0)
-    # use cv2 to print the state
-    
+    plt.title(f'Action control, state: {s},')
+    # plt.axis('off')
+    plt.imshow(img)
+    plt.pause(0.01)
+    plt.clf()
